@@ -1,8 +1,10 @@
 package com.khushi.productservice.services;
 
 import com.khushi.productservice.dtos.FakeStoreProductDto;
+import com.khushi.productservice.exceptions.ProductNotFoundException;
 import com.khushi.productservice.models.Category;
 import com.khushi.productservice.models.Product;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -12,21 +14,23 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
+@Primary
 public class FakeStoreProductService implements ProductService {
 
     RestTemplate restTemplate;
 
     public FakeStoreProductService(RestTemplate restTemplate) {
-
         this.restTemplate = restTemplate;
     }
 
     @Override
-    public Product getProductById(Long id) {
+    public Product getProductById(Long id) throws ProductNotFoundException{
         FakeStoreProductDto fakeStoreProductDto = restTemplate.getForObject("https://fakestoreapi.com/products/" + id, FakeStoreProductDto.class);
+        if (fakeStoreProductDto == null) {
+            throw new ProductNotFoundException(100L,"Product not found for id: "+ id);
+        }
         return convertFakeStoreProductDtoToProduct(fakeStoreProductDto);
     }
 
@@ -44,7 +48,7 @@ public class FakeStoreProductService implements ProductService {
     public Product replaceProduct(Long id, Product product) {
         FakeStoreProductDto fakeStoreProductDto = new FakeStoreProductDto();
         fakeStoreProductDto.setTitle(product.getTitle());
-        fakeStoreProductDto.setDescription(product.getDesc());
+        fakeStoreProductDto.setDescription(product.getDescription());
         fakeStoreProductDto.setPrice(product.getPrice());
         RequestCallback requestCallback = restTemplate.httpEntityCallback(fakeStoreProductDto, FakeStoreProductDto.class);
         ResponseExtractor<ResponseEntity<FakeStoreProductDto>> responseExtractor = restTemplate.responseEntityExtractor(FakeStoreProductDto.class);
@@ -55,6 +59,11 @@ public class FakeStoreProductService implements ProductService {
         return convertFakeStoreProductDtoToProduct(fakeStoreProductDto1);
     }
 
+    @Override
+    public Product createProduct(Product product) {
+        return null;
+    }
+
     private Product convertFakeStoreProductDtoToProduct(FakeStoreProductDto fakeStoreProductDto) {
         if (fakeStoreProductDto == null) {
             return null;
@@ -63,7 +72,7 @@ public class FakeStoreProductService implements ProductService {
         Product product = new Product();
         product.setId(fakeStoreProductDto.getId());
         product.setTitle(fakeStoreProductDto.getTitle());
-        product.setDesc(fakeStoreProductDto.getDescription());
+        product.setDescription(fakeStoreProductDto.getDescription());
         product.setPrice(fakeStoreProductDto.getPrice());
 
         Category category = new Category();
